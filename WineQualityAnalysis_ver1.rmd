@@ -1,0 +1,663 @@
+Red & White wine analysis - Alexandru Jalba Cornfeld
+========================================================
+
+> **UDACITY Exploratory Data Analysis - Project 7**
+
+ **Project Overview**: There are more than one million wine makers in the world, producing around 2.8bn cases of wine each year. Global demand has hit nearly 3bn and is rising. But the global wine industry is changing shape, with the old world gradually losing its crown as the world's vineyard, and new wine drinkers emerging from countries like China.
+
+The quality of the wine is one of the main drivers in deciding the preferences of customers. This project is an Exploratory Data Analysis on the quality of various wines collected from all over the world, rated by wine experts with grades between 0 (very bad) and 10(excellent). The data provided consist of 10 chemical properties associated to the wine, the color and the quality of that wine. 
+
+>**Project GOAL** 
+
+*First goal* is to determine what are the chemical differences between Red and White wines. Off course, looking at them we can differentiate which one is Red and which one is white but if we would know only the given parameters can we make the difference? 
+
+*Second Goal* is to determine what makes Red Wine - High Quality wines.
+
+*Third Goal* is to determine what makes White Wine - High Quality Wine.
+
+**General overview**: For this investigation I combined the White wine dataset and Red wine dataset.
+The resulted dataframe is a collection of 6500 observations on 12 variables. The sample of white wine is about two times higher than the sample of red wine. 11 Variables are describing the chemical structure of the wine.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, , message=FALSE}
+
+
+# Load all of the packages that you end up using in your analysis in this code
+
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(corrplot)
+library(dplyr)
+
+```
+
+```{r echo=FALSE}
+# Load the Data
+getwd()
+#changing my work directory
+setwd('C:/Users/alexj/Downloads')
+#upload the dataset
+wineQuality <- read.csv('wineQuality.csv')
+```
+
+###Structure and Summary of the DataSet
+
+```{r echo=FALSE}
+#get the structure of the dataset
+#str(wineQuality)
+#create a data summary
+summary(wineQuality)
+```
+
+At a first glance we observe a fair amount of spread on many of the variables. For the acidity columns we see that the maximum value is over two times the 3rd quartile, even four for citric acid. 
+The highest upper variance (between the 3rd quartile and maximum value) is for residual sugar.  
+The highest difference between median and mean can be observed for residual sugarl as well.
+The highest lower difference (between the minimum value and the 1st quartile) is for total.sulfur.dioxide.
+
+
+###Table Quality variables
+```{r echo=FALSE}
+
+#quick table view on the quality column 
+table(wineQuality$quality)
+```
+
+We notice that the quality variable doesn't contain any value of 10 so we will not know what chemical properties a perfect wine has. A score of nine is very hard to get, out of 6500 wines only 5 of them obtained a score of 9. The majority of the grades given are in the mid ranges, from 5 to 7. We observe that we don't have very bad wines either we have no wines that received a grade between 0 and 2. The lowest score observed is 3 and this is only for 30 values. 
+
+
+```{r echo=FALSE}
+
+# Determine whether there are any 'NA' values in the dataset
+data <- na.omit(data)
+```
+
+
+
+# Univariate Plots Section
+
+ I will start my investigation by analyzing variables with the help of histograms per categories.
+All the variables related to acidity will go into one category, sulf related a second one, alcohol related the third. Quality is on it's own. In this Analysis I am interested in both Red and White wines I will create seperate graphs to evidentiate their distribution.
+
+
+
+>Ploting the histograms will be repetitive work. I decided to create a function which will receive as parameters title, dataset, x variable, binwidth and quantile limits. Using this function will make easier to read and understand my code.
+
+```{r echo=FALSE}
+#creating my histogram plotting function
+fhist1 <- function(title,dataset,varx,binwidth,xmin,xmax){
+  ggplot(data = dataset,
+             aes_string(x = varx))+
+    xlim( quantile(dataset[,varx],xmin),
+          quantile(dataset[,varx],xmax))+
+  geom_histogram(binwidth = binwidth)+
+  facet_wrap(~color)+
+  ggtitle(title)
+  
+}
+```
+
+
+##Ploting Acidity variables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, , warning=FALSE}
+g1 <- fhist1("Fixed Acidity (mg/L)",wineQuality,"fixed.acidity",0.2,0,0.99)
+g2 <- fhist1("Volatile Acidity (mg/L)",wineQuality,"volatile.acidity",0.02,0,0.99) 
+g3 <- fhist1("Citric Acid (mg/L)",wineQuality,"citric.acid",0.01,0,0.99)
+g4 <- fhist1("pH (cat)",wineQuality,"pH",0.02,0,0.99)
+          
+grid.arrange(g1,g2,g3,g4, ncol=2)
+
+```
+
+ The pH histogram shows values normally distributed for both color of wine. For the other acidity variables the data looks overspread to the right, making the ditributions aprea skewed to the right. For these distribution I will omit displaying the 1 top % of data. 
+
+> The distribution of these values is very different from red and white wines.
+
+*Fixed.acidity*  for Red Wines has the majority of the values in the 7.5 range while for white wines is a little less, in the 6 range. In terms of the span, we see that for red wines is largely distributed while for white wines is better concentrated between the values of 4 and 10.
+
+*Volatile.acidity* presents a similar pattern as fixed.acidity, here the difference between the colors is more pronounced, the majority of values for Red Wines being in the 0.5 range while for white wines is strong in the 0.25.
+
+*Citric.acid* has a similar display as the previous distributions. There is a very interesting spike for both red and white wines in the 0.5 range. I tend to associate this spike with a specific type of grapes, or maybe a type of wine from a specific part of the world or a different technique in the wine production. Another spike, significantly more evident in the Red wines takes place in the 0 range.
+
+*pH* value are the ones closest to a perfect normal distribution for both series. The pH scale takes values between 0 and 14. The pH value for wine is very well concentrated in the 3 to 3.5 range. 
+
+##Ploting Sulf Related Variables
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, , warning=FALSE}
+g5 <- fhist1("Free SO2  (mg/L)",wineQuality,"free.sulfur.dioxide",2,0,0.99)
+g6 <- fhist1("Total SO2  (mg/L)",wineQuality,"total.sulfur.dioxide",2,0,0.99)
+g7 <- fhist1("Chlorides  (mg/L)",wineQuality,"chlorides",0.001,0,0.99)
+g8 <- fhist1("Sulphates  (mg/L)",wineQuality,"sulphates",0.02,0,0.99)
+
+grid.arrange(g5,g6,g7,g8, ncol=2)
+
+
+```
+
+ As most of the distribution contain high single values I decided to omit the top 1% of the data.
+
+*Free.sulfur.dioxide* looks to have a normal distribution for white wines, with the bulk of values in the 30 range. For red wines we notice a right-skewed distribution with the majority of values much lower, in the 10 range.
+
+*Total.sulfur.dioxide* seems it has a similar distirbution. For red wines is highly skewed to the right while for white wines is normal, slightly skewed to the left. Again we observe that the bulk of values for red wines is much lower than for white wines.
+
+ I think that after we observed the histograms above we identify a very different characteristic between red and white wines. The value ranges for Free.sulfur.dioxide and  Total.sulfur.dioxide a very different. Knowing one of this values we can tell the color of the wine.
+
+*Chlorides* & *Sulphates* The chlorides and sulphates distributions are skewed to the right for both series. Omitting the top 1 percent of the values we are getting closer to normal distributions. The bulk of values in chlorides for red wines is lower than the bulk of values for white wines, while for sulphates is the opposite.
+
+The Chlorides and citric acid data seem to be widely overspread. I wonder if we can notice a bimodal distiribution by changing the scale.
+
+```{r echo=FALSE, message=FALSE, , message=FALSE}
+#plotting chlorides using a square root scale
+ggplot(data = subset(wineQuality, 
+                     wineQuality$chlorides < 
+                       quantile(wineQuality$chlorides,0.99)),
+             aes(x = chlorides))+
+  geom_histogram()+
+  scale_x_sqrt()+
+  facet_wrap(~color)
+
+#plotting citric.acid using a square root scale
+ggplot(data = subset(wineQuality, 
+                     wineQuality$chlorides < 
+                       quantile(wineQuality$chlorides,0.99)),
+             aes(x = citric.acid))+
+  geom_histogram()+
+  scale_x_sqrt(breaks = seq(0,2,0.5))+
+  facet_wrap(~color)
+```
+
+It doesn't look that there is a bimodal distribution in chlorides but it looks like the citric acid distribution for Red Wines is tri-modal with peaks in 0, 0.1 and 0.5.
+
+##Ploting Alcohol Related Variables and Quality
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+
+g9 <- fhist1("Residual Sugar  (mg/L)",wineQuality,"residual.sugar",0.1,0,0.99)
+g10 <- fhist1("Alcohol (%)",wineQuality,"alcohol",0.1,0,0.99)
+g11 <- fhist1("Density  (mg/L)",wineQuality,"density",0.0003,0.0,0.999)
+g12 <- fhist1("Quality (cat)",wineQuality,"quality",1,0,1)
+
+grid.arrange(g9,g10,g11,g12, ncol=2)
+
+```
+
+*Density* has a normal distribution for red wine and slightly right skewed for white wine. *Quality* follows the pattern of normal distribution too.
+*Alcohol* distirbutions are skewed to the right for both types of wines. In white wines the alcohol distribution has signs of a bimodal distribution, even trimodal.
+*Residual Sugar* has right skewed distribution with overly spread data. as the data is overly spread I will try using a logarhitmic scale to better understand modality. 
+
+```{r echo=FALSE}
+#plotting residual sugar for red wines on a logarithmic scale
+ggplot(data = subset(wineQuality, wineQuality$color == 'red'),
+             aes(x = residual.sugar))+
+  geom_histogram(binwidth = 0.03)+
+  scale_x_log10()+
+  ggtitle("Residual Sugar (mg/L)")
+
+#plotting residual sugar for white wine on a ogarithmic scale
+ggplot(data = subset(wineQuality, wineQuality$color == 'white'),
+             aes(x = residual.sugar))+
+  geom_histogram(binwidth = 0.04)+
+  scale_x_log10(breaks=seq(0,12,2))+
+  ggtitle("Residual Sugar (mg/L)")
+
+```
+ 
+ Now we can see much better that the distribution of *Residual.sugar* in Red wines is a normal one, skewed to the right, more interesting is that for White Wines we notice a very pronounced bi-modal distribution. Having a bimodal distribution indicates two different categories of wine types in our data set. While the reason is still unclear, we can see that we have white wines with residual sugar concentrated both above and bellow the value of 3.
+
+
+Lastly I will create a column that divides quality into 3 groups.
+* 2-5 low quality wines (2384)
+* 5-7 medium quality wines (3915)
+* 7-9 high quality wines (198)
+
+We observe that most of our wine samples are medium quality. For red wines we have about the same amount of low quality samples and about only 1% represent high quality wines. For white wines we have 3078 medium quality, 2348 low quality ones and only 3.6% of them are high quality.
+
+
+ 
+```{r echo=FALSE}
+#creating the quality range categorical variable to differentiate the wine quality
+wineQuality$quality.range <- 
+  cut(wineQuality$quality, breaks = c(2,5,7,9),
+    labels = c("Poor Quality","Medium Quality","High Quality"))
+
+ggplot(data = wineQuality,
+       aes(x = quality.range))+
+  geom_histogram(stat="count")+
+  facet_wrap(~color)+
+  ggtitle("Quality Range (cat)")
+
+summary(subset(wineQuality,wineQuality$color == 'red')$quality.range)
+summary(subset(wineQuality,wineQuality$color == 'white')$quality.range)
+summary(wineQuality$quality.range)
+
+```
+
+###Univariate Analysis
+
+With the help of the above visualization we had our first glance at the dataset and we are much closer to our goal in finding differences between Red and White wines. We saw that for Free SO2 and Total SO2 the ranges are very wide spread. Giving one of these two properties we would know with a fairly good accuracy what type the wine is.
+Even though in close ranges we saw very different distributions for Residual Sugar and Citric Acid between the series. Bi-modal distribution in Residual Sugar for White wines (Red - normal) and even a tri-modal distribution for citric acid in Red Wines (White - normal).
+
+# Bivariate Plots Section
+
+
+>I will start the Bivariate Analysis by understanding the correlation coeficient for my variables.
+I am starting from the assumption that the wine types have different chemical properties that drive quality; my assumption is based on the differences we saw in the previous section, in the chemical ranges of free.sulfur.dioxide, total.sulfur.dioxide and citric.acid.
+
+### Red Wine correlation matrix
+
+```{r echo=FALSE}
+#corr matrix RedWine
+MRed <- cor(subset(subset(wineQuality,color == 'red'),
+                   select = -c(quality.range,color) ))
+corrplot.mixed(MRed, upper = "square", lower.col = "black",tl.col = "black")
+```
+
+### White wine correlation Matrix
+
+```{r echo=FALSE}
+#corr matrix White wine
+MWhite <- cor(subset(subset(wineQuality,color == 'white')
+                     ,select = -c(quality.range,color) ))
+corrplot.mixed(MWhite, upper = "square", lower.col = "black",tl.col = "black")
+
+```
+
+
+>The matrix above shows the correlation between each of the variables in our dataset.
+My analysis focuses on finding the chemical properties of Red and White wines that drive quality and see if they are different for the two wine types.
+I the next section I want to create plots to show the relationship between different variable and Quality.
+
+For Red Wines we see a direct correlation bertween Quality and:
+* Alcohol (positive, 0.48)
+* Sulphates (positive, 0.25)
+* Total.sulfur.dioxide (negative, 0.19)
+* Citric.acid (positiv, 0.23)
+* Volatile.acidity (negative, 0.39)
+
+Secondary Strong Correlations (RED):
++ fixed to volatile acidity (positiv, 0.67)
++ citric to volatile acidity (negative, 0.55)
++ fixed acidity to density (positive, 0.67)
++ pH to fixed acidity (negative, 0.68)
++ ph to citric acidity (negative, 0.54)
++ chlorides to sulphates (positive, 0.37)
+ 
+For White Wines we see a direct correlation between Quality and:
+* alcohol (positive, 0.44)
+* density (negative, 0.31)
+* chlorides (negative, 0.21)
+* total.sulfur.dioxide (negative, 0.19)
+
+Secondary Strong Correlations (WHITE):
++ density to residual sugar (positive, 0.78)
++ fixed acidity to ph (negative, 0.43)
++ free to total sulfur dioxide (positive, 0.62)
++ total SO2 to density (positive, 0.53)
++ alcohol to density (negative, 0.78)
++ alcohol to residual sugar (negative, -0.45)
+ 
+My assumptions appears to be correct, Quality has very different correlation coeficients to chemical properties.
+Now I will subset the data to RedWine and WhiteWine. For code simplicity I am also creating a plotting function for scatter plots and one for boxplots.
+
+```{r echo=FALSE}
+#creating a quality categorical variable to use in boxplots
+wineQuality$quality_cat <- ordered(wineQuality$quality)
+
+#subseting the data
+redWine = subset(wineQuality,color == 'red')
+whiteWine = subset(wineQuality,color == 'white')
+
+```
+
+```{r echo=FALSE}
+#creating a plotting function to simplify the code
+
+#boxplotting function
+fbox <- function(title,dataset,vary,color,alpha,ymin,ymax,varx = "quality")
+    ggplot(dataset,
+           aes_string(x = varx, 
+                      y = vary))+
+      geom_boxplot(aes_string(color = color))+
+      ylim(quantile(dataset[,vary], ymin),quantile(dataset[,vary], ymax))+
+    ggtitle(bquote(atop(.(title))))+
+  xlab("Quality (cat)")
+  
+#scatter plot function
+fscatter <- function(title,dataset,vary,color,alpha,ymin,ymax,varx = "quality")      
+    ggplot(dataset,
+           aes_string(x = varx,
+                      y = vary,
+                      color = color))+
+      geom_point(alpha = alpha,
+                 position = position_jitter(h = 0))+
+      geom_smooth(method="lm", color = "orange")+
+      ylim(quantile(dataset[,vary], ymin),
+           quantile(dataset[,vary], ymax))+
+  xlab("Quality (cat)")
+```
+
+## Bivarite plots for Red Wines (Quality vs highly correlated variables)
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+#Plotting "Red Wine Quality vs Alcohol"
+g13 <- fbox("Red Wine Quality vs Alcohol",
+            redWine,"alcohol","quality_cat",1/2,0.01,0.99)  + 
+  ylab("Alcohol (%)")
+
+
+g14 <- fscatter("Red Wine Quality vs Alcohol",
+                redWine,"alcohol","quality_cat",1/2,0.01,0.99) + 
+  ylab("Alcohol (%)")
+
+grid.arrange(g13,g14,ncol=2)
+
+#Plotting "Red Wine Quality vs Sulphates"
+g15 <-fbox("Red Wine Quality vs Sulphates",
+           redWine,"sulphates","quality_cat",1/2,0.01,0.99) +
+  ylab("Sulphates (mg/L)")
+g16 <-fscatter("Red Wine Quality vs Sulphates",
+               redWine,"sulphates","quality_cat",1/2,0.01,0.99) +
+  ylab("Sulphates (mg/L)")
+grid.arrange(g15,g16,ncol=2)
+
+
+g17 <- fbox("Red Wine Quality vs Total_SO2",
+            redWine,"total.sulfur.dioxide","quality_cat",1/2,0.01,0.99) +
+  ylab("Total_SO2 (mg/L)")
+g18 <- fscatter("Red Wine Quality vs Total_SO2",
+                redWine,"total.sulfur.dioxide","quality_cat",1/2,0.01,0.99) +
+  ylab("Total_SO2 (mg/L)")
+grid.arrange(g17,g18,ncol=2)
+
+
+g19 <- fbox("Red Wine Quality vs Citric Acid",
+            redWine,"citric.acid","quality_cat",1/2,0.01,0.99) +
+  ylab("Citric Acid (mg/L)")
+g20 <- fscatter("Red Wine Quality vs Citric Acid",
+                redWine,"citric.acid","quality_cat",1/2,0.01,0.99) +
+  ylab("Citric Acid (mg/L)")
+grid.arrange(g19,g20,ncol=2)
+
+
+g21 <- fbox("Red Wine Quality vs Volatile Acidity",
+            redWine,"volatile.acidity","quality_cat",1/2,0.01,0.99) +
+  ylab("Volatile Acidity (mg/L)")
+g22 <- fscatter("Red Wine Quality vs Volatile Acidity",
+                redWine,"volatile.acidity","quality_cat",1/2,0.01,0.99) +
+  ylab("Volatile Acidity (mg/L)")
+grid.arrange(g21,g22,ncol=2)
+
+
+```
+
+###Bivariate Red Wine Analysis
+
+*Alcohol vs Quality (positive)* When it comes to alcohol, the majority of high quality wines are over 11%, all the poor quality wines in our data set are under 11%. In the medium quality section values are widely spread mostly in the bottom section. 
+
+*Sulphates vs Quality (positive)* are driving quality positively. We see that high quality wines have a medium concentration in sulphates while poor quality wines have a low sulphates concentration. There are medium quality wines with a very high level of sulphates making me believe that after a certain sulphates value quality might be undermined. The relationship is positive.
+
+*Total SO2 vs Quality (negative)* is interesting, most of the wines have low SO2 values. The high quality wines have a wide spread of SO2, just as quality category 4. The poor quality wines we have in our dataset all seem to have the same levels as high quality wines. Going forward **I will omit this variable**.
+
+*Citric Acid vs Quality (positive)* This visualization is interesting, mainly high values of citric acid drive quality but there is a special group of Red Wines (probably a certain type) that has low values in citric acid and receives great rankings. Looking again at the distribution of citric acid we see a tri-modal distribution. **I will omit this variable** in my next calculations.
+
+*Volatile Acidity vs Quality (negative)* Here we have a clear path, low levels in volatile acidity drive quality.
+
+
+## Bivarite plots for White Wines (Quality vs highly correlated variables)
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+
+g23 <- fbox("White Wine Quality vs Alcohol",
+            whiteWine,"alcohol","quality_cat",1/2,0.01,0.99)+
+       ylab("Alcohol (%)")
+g24 <- fscatter("White Wine Quality vs Alcohol",
+                whiteWine,"alcohol","quality_cat",1/2,0.01,0.99)+
+       ylab("Alcohol (%)")
+grid.arrange(g23,g24,ncol=2) 
+
+g25 <- fbox("White Wine Quality vs Density",
+            whiteWine,"density","quality_cat",1/2,0.01,0.99)+
+       ylab("Density (mg/L)")
+g26 <- fscatter("White Wine Quality vs Density",
+                whiteWine,"density","quality_cat",1/2,0.01,0.99)+
+       ylab("Density (mg/L)")
+grid.arrange(g25,g26,ncol=2)
+
+g27 <- fbox("White Wine Quality vs Chlorites",
+            whiteWine,"chlorides","quality_cat",1/2,0.01,0.99)+
+       ylab("Chlorites (mg/L)")
+g28 <- fscatter("White Wine Quality vs Chlorites",
+                whiteWine,"chlorides","quality_cat",1/2,0.01,0.99)+
+       ylab("Chlorites (mg/L)")
+grid.arrange(g27,g28,ncol=2)
+
+g29 <- fbox("White Wine Quality vs Total SO2",
+            whiteWine,"total.sulfur.dioxide","quality_cat",1/2,0.01,0.99)+
+       ylab("Total SO2 (mg/L)")
+g30 <- fscatter("White Wine Quality vs Total SO2",
+                whiteWine,"total.sulfur.dioxide","quality_cat",1/2,0.01,0.99)+
+       ylab("Total SO2 (mg/L)")
+grid.arrange(g29,g30,ncol=2)
+```
+
+###Bivariate White Wine Analysis
+
+*Alcohol vs Quality (positive)* This is a clear pattern, high level of alcohol drive quality. However, there is again a certain type of White Wine with very low levels in alcohol that scores 8 in quality. I think these sample are very special, maybe a subcategory of wines with a different set of characteristics when obtaining quality rankings.
+
+*Density vs Quality (negative)*  Lower density helps. Wines ranked between 6 to 9 show a decreasing pattern in density. Poor quality wines have a low level of density therefore density is not a perfect match to address quality.
+
+*Chlorides vs Quality (negative)* Negative Impact on Quality, the median of our medium wine qualities is high, the poor quality wines also have good values of chloride. Hard to deduct a clear relationship.
+
+*Total SO2 vs Quality (negative)* Here we have a very low relationship, it looks more like there is a prefered level of total SO2. Most of the wines are in those or similar parameters and the samples are widely spread. I will omit this variable.
+
+
+# Multivariate Plots Section
+
+ We have seen so far that some of our variables have a positive impact on quality while others a negative one. My line of though is to create variables by grouping the variables we have analyzed so far in nominators and denominators. Variables having a positive correlation are my nominators, negative correlation would be my denominator.
+
+ $redWineVariable = alcohol^{2}*sulphates / volatile.acidity$
+ 
+```{r echo=FALSE}
+#creating RedWine_variable
+redWine$redWine_variable <- with(redWine, alcohol * alcohol * sulphates * 
+                                   ( 1/volatile.acidity ) )
+
+```
+
+ $whiteWineVariable = alcohol / density$
+ 
+```{r echo=FALSE}
+#creating WhiteWine_variable
+whiteWine$whiteWine_variable <- with(whiteWine, 
+                                     alcohol * (1/(density )))
+
+```
+
+
+
+## Multivariate Plots (Red Wine w redWine variable)
+
+>For **Red wine** I created my variable using alcohol, sulphates and volatile acidity / I removed total sulfates dioxide and citric acid due to reasons I explained previously. Alochol and sulphates have a positive relationship with quality, therefore I will multiply them. Volatile acidity has a negative relationship, I will divide by it. After several attempts I decided to use alcohol to the second power to pronounce more the High quality wines.
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+g35 <- fbox("Red Wine Quality vs RedWine var",
+            redWine,"redWine_variable",
+            "quality.range",
+            1/2,0,0.95,"quality_cat")+
+  xlab("Quality Range (cat)")
+g36 <- fscatter("Red Wine Quality vs RedWine var",
+                redWine,"redWine_variable",
+                "quality.range",
+                1/2,0,0.95,"quality_cat")+
+  xlab("Quality Range (cat)")
+
+grid.arrange(g35,g36,ncol=2)
+
+```
+
+I believe this is a good visualization, when my redWine_variable increases the quality increases as well. There are wines, ranked as medium quality, that have high value in my variable. Generally my redWine_variable will provide good results but there are exceptions. 
+
+```{r echo=FALSE}
+#calculating the corelation coefficient for my redWine_variable
+cor.test(redWine$redWine_variable,redWine$quality)
+
+```
+
+>The correlation coefficient I obtained is 0.501 which I am pretty happy with, it is greater than any other corelation coefficient for quality. Nevertheles it does not describe a strong relationshiop. 
+
+## Multivariate Plots (White Wine w whiteWhine variable)
+
+For **White Wines** I created my variable using alcohol and density. Alcohol has a positive relationship with quality, I kept it as my numerator. Density has a negative relationship it will be my denominator.
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+g35 <- fbox("White Wine Quality vs White Wine var",
+            whiteWine,"whiteWine_variable",
+            "quality.range"
+            ,1/2,0.01,0.99,
+            "quality_cat")+
+  xlab("Quality Range (cat)")
+g36 <- fscatter("White Wine Quality vs White Wine var",
+                whiteWine,"whiteWine_variable",
+                "quality.range"
+                ,1/2,0.01,0.99,
+                "quality_cat")+
+  xlab("Quality Range (cat)")
+
+grid.arrange(g35,g36,ncol=2)
+
+```
+
+```{r echo=FALSE}
+#calculating correlation coefficient for my whiteWine_variable
+cor.test(whiteWine$whiteWine_variable,whiteWine$quality)
+```
+
+>The correlation coeficient I obtained here is 0.43. This value is low, I am thinking that just plotting alcohol with quality would be a better choice.
+
+#-------------------------------------------------------
+
+
+
+ 
+ 
+#Final Plots and Summary 
+
+>**Project GOALs** 
+
+ * *First goal* is to determine what are the chemical differences between Red and White wines. Off course, looking at them we can differentiate which one is Red and which one is white but if we would know only the given parameters can we make the difference? 
+
+ * *Second Goal* is to determine what makes Red Wine - High Quality wines.
+
+ * *Third Goal* is to determine what makes White Wine - High Quality Wine.
+
+The Quality Ranges are combined into 3 categories:
+ * 2-5 Low quality wines (2384)
+ * 6-7 Medium quality wines (3915)
+ * 8-9 High quality wines (198) 
+
+### Plot One (Chemical Differences between Red and White wines)
+
+```{r echo=FALSE}
+fhist <- function(title,dataset,varx,binwidth = 2,
+                  xmin = 0,xmax = 80,xstep = 10){
+  ggplot(data = dataset,
+             aes_string(x = varx))+
+  geom_histogram(binwidth = binwidth)+
+  scale_x_continuous(breaks = seq(xmin,xmax,xstep), limits = c(xmin,xmax))+
+  facet_wrap(~color)+
+    ggtitle(title)
+}
+
+```
+
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+g101 <- fhist("Free Sulfur Dioxide Histogram (mg/L)",
+              wineQuality,"free.sulfur.dioxide",2,0,80,10)
+g102 <- fhist("Total Sulfur Dioxide Histogram (mg/L)",
+              wineQuality,"total.sulfur.dioxide",2,0,300,50)
+g103 <- fhist("Citric Acid Histogram (mg/L)",
+              wineQuality,"citric.acid",0.1,0,1,0.1)
+
+grid.arrange(g101,g102,g103, ncol=1)
+
+```
+
+### Description One
+> After a lot of ploting we found chemical parameters that differentiate between Red wines and White wines.
+Off course we can differentiate the color of the wine just by looking at it but what are the chemical properties that differentiate them.
+Maybe these properties are responsible for giving the color of the wine?
+
+>*Red Wines* have free sulfur dioxide under 20 mg/L , total sulfur dioxide mostly between 0 and 50 mg/L and very little values of citric acid.
+>*White wines* have free sulfur dioxide concentrated in the 30mg/L values, total sulfur dioxide concentrated in the 120 values and citric acid around 0.3.
+
+>The biggest difference we see is in the total sulfur dioxide which is much larger for White wines than Red wines (about 3 times)
+
+### Plot Two (High Quality Red Wines)
+
+>With this second plot I am trying to evidentiate a relationship that differentiates between High Quality, Medium Quality and Poor Quality Red Wines.
+After a lot of plotting and struggling I found a mathematical relationship that suits my purpose. 
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+
+ggplot(data = redWine, 
+       aes(x = quality,
+           y = redWine_variable,
+           color = quality.range
+           ))+
+  geom_point(alpha = 1/2, 
+             position = position_jitter(h = 0))+
+  ylim(quantile(redWine$redWine_variable,0),
+       quantile(redWine$redWine_variable,0.99))+
+  geom_smooth(method = "lm" , color="orange")+
+  scale_x_continuous(breaks = seq(1,9,1))+
+  ggtitle("Red Wines: Quality vs my RedWine_Variable")+
+  xlab("Quality Range (cat)")
+  
+
+```
+
+
+### Description Two
+>We see that the pattern is ascending or positive. when we have high values in my redWine_variable we get higher wine quality. For High quality wines the spread is quite big and there are lower quality wines which scored much better. I would conclude that having high values in my redWine_variable doesn't ensure that your wine will get a high quality score but it has the best chances to get a high quality score.
+
+### Plot Three (High Quality White Wines)
+
+```{r echo=FALSE, warning=FALSE, , message=FALSE}
+
+ggplot(data = whiteWine, 
+       aes(x = quality,
+           y = whiteWine_variable,
+           color = quality.range
+           ))+
+  geom_point(alpha = 1/2, 
+             position = position_jitter(h = 0))+
+  ylim(quantile(whiteWine$whiteWine_variable,0),
+       quantile(whiteWine$whiteWine_variable,1))+
+  geom_smooth(method = "lm" , color="orange")+
+  scale_x_continuous(breaks = seq(1,9,1))+
+  ggtitle("White Wines: Quality vs my whiteWine_Variable")+
+  xlab("Quality Range (cat)")
+  
+
+```
+
+### Description Three
+
+>For White Wines I found that alcohol and chlorides to density ratio make the difference in quality.
+High quality white wines would have an increase level of alcohol with low values in the chlorides and density.
+We can notice here a type of wines that are different from the model. The have low values in my whiteWine_variable, but still they receive a score of 8, making them high quality wines. 
+
+# Reflection
+
+>This has been a long and interesting journey
+With my analysis we achieved the following main points:
+ - we differentiated between Red and White wines from a chemical perspective;
+ - we created new variables and managed to separate High Quality wines for both Red and White wines series;
+ - we saw that alcohol has a direct relationship with quality, the higher the alcohol the higher the quality;
+ - we saw a bimodal distribution for residual sugar for which I suspect 2 different types/methodologies for making wine;
+ - we saw a tri-modal distribution in citric acid and therefore took it out of the final equation.
+ - we built 2 formulas/variables to account for high quality in wines. They correspond to the two type of wines and are very different among each other.
+ 
+I found this project very challenging and addictively interesting. After my first two day I had a look at what others did and had to change it from ground up. After another couple of days I found myself in a project with a little over 2000 lines, very hard to follow. I could barely understand it myself. I overcome that challenge by creating functions, this allowed me to remove big chunck of code. There was a lot of running around, I've created variables and plotted them against quality to see what fit best. At the end I decided to plot the variables which made sense in my mind, and I believe this gave my project a direction and a straight forward line of thought.
+  
